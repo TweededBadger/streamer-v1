@@ -6,11 +6,11 @@ angular.module('streamerApp')
     $scope.peerID = "";
 
     var mediaStream;
-    var audio = new Audio();
-    //audio.src = 'myfile.mp3';
-    audio.controls = true;
-    audio.autoplay = true;
-    document.body.appendChild(audio);
+    //var audio = new Audio();
+    ////audio.src = 'myfile.mp3';
+    //audio.controls = true;
+    //audio.autoplay = true;
+    //document.body.appendChild(audio);
 
     $http.get('/api/things').success(function(awesomeThings) {
       $scope.awesomeThings = awesomeThings;
@@ -34,8 +34,23 @@ angular.module('streamerApp')
       var call = peer.call($scope.targetID, mediaStream);
     }
 
+    $scope.connectToBroadcast = function() {
+      console.log($scope.targetID);
+      var c = peer.connect($scope.targetID, {
+        label: 'connect',
+        serialization: 'none',
+        metadata: {id: $scope.peerID}
+      });
+    }
+
+    var  playStream = function(stream) {
+      var audio = $('<audio autoplay />').appendTo('body');
+      audio[0].src = (URL || webkitURL || mozURL).createObjectURL(stream);
+    }
+
     var  success = function(e){
       mediaStream = e;
+
       // creates the audio context
       //var audioContext = window.AudioContext || window.webkitAudioContext;
       //var context = new audioContext();
@@ -74,8 +89,13 @@ angular.module('streamerApp')
       //recorder.connect (context.destination);
     }
 
-    //var peer = new Peer({key: '7yq3dpsm6zgp66r'});
-    var peer = new Peer({host: 'localhost', port: 9010, key: 'peerjs'});
+    var peer = new Peer({key: '7yq3dpsm6zgp66r',debug: 3,
+      logFunction: function() {
+        var copy = Array.prototype.slice.call(arguments).join(' ');
+        console.log(copy);
+      }
+    });
+    //var peer = new Peer({host: 'localhost', port: 9010, key: 'peerjs'});
 
     peer.on('open', function(id) {
       console.log('My peer ID is: ' + id);
@@ -85,18 +105,30 @@ angular.module('streamerApp')
 
     });
 
-    peer.on('call', function(call) {
-      // Answer the call, providing our mediaStream
-      console.log("Call recieved");
-      console.log(call);
-      call.answer(mediaStream);
-      call.on('stream', function(stream) {
-        // `stream` is the MediaStream of the remote peer.
-        // Here you'd add it to an HTML video/canvas element.
-        console.log(stream);
-      });
+    peer.on('connection', connect);
 
-    });
+    peer.on('error', function(err) {
+      console.log(err);
+    })
+
+    var connect = function(c) {
+      console.log("New chat connection");
+      console.log(c);
+    }
+
+    //peer.on('call', function(call) {
+    //  // Answer the call, providing our mediaStream
+    //  console.log("Call recieved");
+    //  console.log(call);
+    //  call.answer(mediaStream);
+    //  call.on('stream', function(stream) {
+    //    // `stream` is the MediaStream of the remote peer.
+    //    // Here you'd add it to an HTML video/canvas element.
+    //    console.log(stream);
+    //    playStream(stream);
+    //  });
+    //
+    //});
 
 
   });
