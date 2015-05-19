@@ -48,8 +48,78 @@ angular.module('streamerApp')
       audio[0].src = (URL || webkitURL || mozURL).createObjectURL(stream);
     }
 
+    var log = function(str) {
+      $('.debug').html(str+'<br>'+$('.debug').html())
+    }
+
+    var mediaStreamSource;
+    var analyser;
+
+    var buflen = 1024;
+    var buf = new Float32Array( buflen );
+
+    var waveCanvas;
+
+    var audioContext = new AudioContext();
+
+    var DEBUGCANVAS = document.getElementById( "waveform" );
+    if (DEBUGCANVAS) {
+      waveCanvas = DEBUGCANVAS.getContext("2d");
+      waveCanvas.strokeStyle = "black";
+      waveCanvas.lineWidth = 1;
+    }
+
+    $scope.checkAudio = function() {
+        var cycles = new Array;
+        analyser.getFloatTimeDomainData( buf );
+
+      waveCanvas.clearRect(0,0,512,256);
+      waveCanvas.strokeStyle = "red";
+      waveCanvas.beginPath();
+      waveCanvas.moveTo(0,0);
+      waveCanvas.lineTo(0,256);
+      waveCanvas.moveTo(128,0);
+      waveCanvas.lineTo(128,256);
+      waveCanvas.moveTo(256,0);
+      waveCanvas.lineTo(256,256);
+      waveCanvas.moveTo(384,0);
+      waveCanvas.lineTo(384,256);
+      waveCanvas.moveTo(512,0);
+      waveCanvas.lineTo(512,256);
+      waveCanvas.stroke();
+      waveCanvas.strokeStyle = "black";
+      waveCanvas.beginPath();
+      waveCanvas.moveTo(0,buf[0]);
+      for (var i=1;i<512;i++) {
+        waveCanvas.lineTo(i,128+(buf[i]*128));
+      }
+      waveCanvas.stroke();
+
+
+      if (!window.requestAnimationFrame)
+        window.requestAnimationFrame = window.webkitRequestAnimationFrame;
+      var rafID = window.requestAnimationFrame( $scope.checkAudio );
+
+
+    }
+
+    var startVisualizer = function() {
+      $scope.checkAudio();
+
+
+    }
+
     var  success = function(e){
       mediaStream = e;
+
+      mediaStreamSource = audioContext.createMediaStreamSource(mediaStream);
+
+      // Connect it to the destination.
+      analyser = audioContext.createAnalyser();
+      analyser.fftSize = 2048;
+      mediaStreamSource.connect( analyser );
+
+      startVisualizer();
 
       // creates the audio context
       //var audioContext = window.AudioContext || window.webkitAudioContext;
@@ -89,10 +159,17 @@ angular.module('streamerApp')
       //recorder.connect (context.destination);
     }
 
-    var peer = new Peer({key: '7yq3dpsm6zgp66r',debug: 3,
+    //var peer = new Peer({key: '7yq3dpsm6zgp66r',debug: 3,
+    //  logFunction: function() {
+    //    var copy = Array.prototype.slice.call(arguments).join(' ');
+    //    console.log(copy);
+    //  }
+    //});
+    var peer = new Peer({host: '192.168.0.4', port: 9010, key: 'peerjs',debug: 3,
       logFunction: function() {
         var copy = Array.prototype.slice.call(arguments).join(' ');
         console.log(copy);
+        log(copy)
       }
     });
     //var peer = new Peer({host: 'localhost', port: 9010, key: 'peerjs'});
@@ -105,7 +182,13 @@ angular.module('streamerApp')
 
     });
 
-    peer.on('connection', connect);
+    peer.on('connection', function(e) {
+      console.log(e);
+      console.log(e.metadata.id);
+      log("New connection: " + e.metadata.id);
+      $scope.targetID = e.metadata.id;
+      $scope.makeCall();
+    });
 
     peer.on('error', function(err) {
       console.log(err);
@@ -116,19 +199,19 @@ angular.module('streamerApp')
       console.log(c);
     }
 
-    //peer.on('call', function(call) {
-    //  // Answer the call, providing our mediaStream
-    //  console.log("Call recieved");
-    //  console.log(call);
-    //  call.answer(mediaStream);
-    //  call.on('stream', function(stream) {
-    //    // `stream` is the MediaStream of the remote peer.
-    //    // Here you'd add it to an HTML video/canvas element.
-    //    console.log(stream);
-    //    playStream(stream);
-    //  });
-    //
-    //});
+    peer.on('call', function(call) {
+      // Answer the call, providing our mediaStream
+      log("Call recieved");
+      log(call);
+      call.answer(null);
+      call.on('stream', function(stream) {
+        // `stream` is the MediaStream of the remote peer.
+        // Here you'd add it to an HTML video/canvas element.
+        console.log(stream);
+        playStream(stream);
+      });
+
+    });
 
 
   });

@@ -38,7 +38,16 @@
     <button class="btn" ng-click="startStream()">START STREAM</button>
   </div>
   <div>
+    <button class="btn" ng-click="checkAudio()">CHECK AUDIO</button>
+  </div>
+  <div>
     <button class="btn" ng-click="makeCall()">MAKE CALL</button>
     <input type="text" ng-model="targetID"/>
   </div>
+  <div>
+    <canvas id="waveform" width="512" height="256"></canvas>
+  </div>
+  <div class="debug"></div>
 </div>
+
+
